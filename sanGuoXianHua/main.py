@@ -86,6 +86,7 @@ def like(url=main_url,mode=0):
                 admore[0].click()
         else:
             #如果是主页就尝试按刷新键刷新新内容
+            driver.execute_script("window.scrollBy(0,200)")#先下滑一小段距离使得刷新键出现
             rbt=driver.find_elements(By.XPATH,'/html/body/div/div/div/div[4]')
             if len(rbt) != 0:       #避免刷新键没刷出来导致的报错
                 try:
