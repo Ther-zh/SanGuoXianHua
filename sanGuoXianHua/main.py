@@ -7,10 +7,30 @@ from selenium.webdriver.support import expected_conditions as EC
 import json
 import os
 from random import randint
+import psutil
+
 cookie_loaded = 0
 main_url='https://xianhua.sanguosha.cn/'
 driver=webdriver.Edge()
 dis_src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAApCAYAAABHomvIAAAAAXNSR0IArs4c6QAABBVJREFUWEftl19oW3UUx7/npkmGm1jXF6WiHYhsasHNBycIijKfxkTQOrt7558t9zZEk3ujzDkcfVAco6y5iXU2Ny2hze3UuAd17Emx4oOCTEXdZNAHZbjoQyFurNia5h65NwnOmr9r2gTs7+mX/M7v/D58z/mde36ENh/U5nxYA1xuhP6fCuqJ1A4w+UHYTMzfAjgekqUvr0XNpisYS5iqxYgshSHAH5LF0UYhmwo4PJa6XbBoxoZg4BIxn2eizQTcACC34FroeWXfvkwjkE0F1I3UWwC9YMNYjHvDivjjsURyu4vdX9lQxOwLKdJYSwCPjo9f7817bXU2AJhWZfFhG2RkZKJr0eOaLap6SJPFIy0B1A3zdQCvOSCEJzWfeNKeRxNmgBkj9twC7QjLez5ddcDo2JTEFk8WD55RZfGOEoRumD8B2ALggiqLtzUC56RFoxtK9ul02pPJ/nkTyHUIgFL8f86yrIfCA3vP2L8joyfuJ8EqlZc3VFk83Oh5VQFjsZiXvRt3M/EgQJtqOL/CJDym+fo/K9lFDTPGwIt1QM1agHxLp+fjvr6+/NX2FQGTyeS6Szn35wDuq3FADoSvrUXPU2F/38WrbaOG+SYDr9YB6Jgw+CVNlobrAtQN8x0AA8U8yFrA5cKcugHuIKIMM8eFeejBoOislRt63HyPCdurQRKoC2D79v8nT8sqmE6nXZnswhyIvCB8ofrEB/9J+qmfAe5hxoSmiM/Wq041u6hhfsDAEwAyqix211Qw8vbkFnIL9u2za8NudUB8f6UAhyYn17vnhSuOf4Kp+kSpNqAxdQ+Bv3PygvlxTZE+XCnAiGE+T8C47V8QhF3B/f2n2gpQj6c+AtEuAFlVFjcuTYWyORhZJQUjyWQn5dzZ4g2OarKkthWgnpgKgjlaCG9+W3D/M05atU2IdcP8BsC2YnnpKXRpbQKoxyduBbl+KZRWDKk+8UC5UtSyHIwYqZcJNORUl7zVG/LvPdtWgLph/gCgF4yzqiL2VirkLVFw2DhxlwCrqBgfVGXpaFsB6gnzCBgHnfKSd23S/E/buVh2tERB3TB/BdANok9U355HK8EVvn5lxkoW6uiY+QhbKLX9AVUWjzcMGBs177QEnHM2WpDUAdFs1rc4EjdHiBCw/f2Vy918IPDc7w0DDk5Pd9w4c3EOgIeZv/csXn4gEAg4HYduLK/d0hPmLBhdBJwOyeLOanAVQ2wvRIzUMQKFi0YZBi4UnPFWgLwA/wHQ+VoH/GudeQOI7na8EPdrPundWvsrtvyDg8l1nd0dKQLZjWRTBwPnruO5rYqi5Go5rvpoisfj7nlav5MBH4CGn4xLD2cgR+AzzDisKdJvteCqhriezathc83v4tWAW1OwGSqvhXi5Kv4NU81ASET1r0QAAAAASUVORK5CYII='
+
+#尝试内存性能优化
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')  # 无头模式节省30%内存
+options.add_argument('--disable-gpu')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')  # 解决/dev/shm溢出
+options.add_argument('--blink-settings=imagesEnabled=false')  # 禁用图片加载
+options.add_experimental_option('excludeSwitches', ['enable-logging'])  # 关闭控制台日志
+
+def memory_guard(driver:driver, threshold=1024):
+    pid = driver.service.process.pid
+    process = psutil.Process(pid)
+    if process.memory_info().rss > threshold * 1024 * 1024:  # 超过阈值MB
+        driver.quit()
+        raise MemoryError(f"内存突破{threshold}MB大关!")
+
+
 def login(url):
     global cookie_loaded
     driver.get(url)
@@ -33,6 +53,7 @@ def login(url):
             json.dump(cookies, f)
         driver.refresh()
     cookie_loaded = 1
+    memory_guard(driver, threshold=2048)
 
 
 #mode为0则遍历主页，否则遍历指定互赞页面
@@ -92,8 +113,8 @@ if __name__== '__main__' :
     if ans=="1":
         cnt=input("选择随机点赞的人数")
         for i in range(0,int(cnt)):
-            rdid = randint(1,99999999)
-            print(f"id={rdid}")
+            rdid = randint(1,16500000)
+            print(f"第{i+1}次点赞:id={rdid}")
             like_url = "https://xianhua.sanguosha.cn/userCenter?id=" + str(rdid)
             like(like_url, 1)
     driver.quit()
